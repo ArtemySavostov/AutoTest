@@ -1,0 +1,36 @@
+name: Java CI with Docker Check
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: docker build -t my-app-image .
+
+      - name: Run Docker Container
+        run: docker run -d -p 8080:8080 --name test-container my-app-image
+
+      - name: Health check with Curl
+        run: |
+          for i in {1..10}; do
+            if curl -s -f http://localhost:8080/api/hello; then
+              echo "Success"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Error: App failed to start"
+          docker logs test-container
+          exit 1
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f test-container
